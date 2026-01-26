@@ -9,6 +9,18 @@ variable "config_repo_files" {
   })))
 }
 
+variable "config_defaults" {
+  description = "Map of Git providers (github/gitlab) to their repository file configurations"
+  type = map(object({
+    service    = string
+    repository = optional(string)
+    branch     = optional(string)
+    file_path  = string
+    project    = optional(string)
+    ref        = optional(string)
+  }))
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)

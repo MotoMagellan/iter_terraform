@@ -28,7 +28,16 @@ locals {
   azs = data.aws_availability_zones.available.names
 
   vpc_defaults = lookup(local.defaults, "vpc", {})       # default VPC values for any VPC created
-  vpc_config   = lookup(local.infra_configs, "vpcs", {}) # does not create a default VPC
+  vpc_config   = lookup(local.infra_configs, "vpcs", {}) # does not create a VPC simply by defaults
+
+  # Calculate VPC CIDR with offset applied to second octet
+  # If vpc_cidr_offset = 1, converts 10.0.0.0/8 to 10.1.0.0/8
+  vpc_cidrs = { for k, v in local.vpc_config : k => (
+    can(v.cidr) ? v.cidr : format(
+      "10.%s.0.0/8",
+      try(v.vpc_cidr_offset, 0)
+    )
+  ) }
 }
 
 ################################################################################
@@ -45,24 +54,16 @@ module "vpc" {
   )
 
   name = try(each.value.name, each.key)
-  cidr = try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)) # must fail if both these fail
+  cidr = local.vpc_cidrs[each.key]
 
-  azs = slice(local.azs, 0, try(each.value.az_count, local.local.vpc_defaults["az_count"], 3))
+  azs = slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3))
 
-  private_subnets     = [for k, v in slice(local.azs, 0, try(each.value.az_count, local.local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k)]
-  public_subnets      = lookup(each.value.create_public_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k + 4)] : null
-  database_subnets    = lookup(each.value.create_database_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k + 8)] : null
-  elasticache_subnets = lookup(each.value.create_elasticache_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k + 12)] : null
-  redshift_subnets    = lookup(each.value.create_redshift_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k + 16)] : null
-  intra_subnets       = lookup(each.value.create_intra_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(try(each.value.cidr, cidrsubnet("10.0.0.0/8", 8, each.value.vpc_cidr_offset)), 8, k + 20)] : null
-
-  # # Supplying these values is not recommended at this time
-  # private_subnet_names = ["Private Subnet One", "Private Subnet Two"]
-  # # public_subnet_names omitted to show default name generation for all three subnets
-  # database_subnet_names    = ["DB Subnet One"]
-  # elasticache_subnet_names = ["Elasticache Subnet One", "Elasticache Subnet Two"]
-  # redshift_subnet_names    = ["Redshift Subnet One", "Redshift Subnet Two", "Redshift Subnet Three"]
-  # intra_subnet_names       = []
+  private_subnets     = [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k)]
+  public_subnets      = lookup(each.value.create_public_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 4)] : null
+  database_subnets    = lookup(each.value.create_database_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 8)] : null
+  elasticache_subnets = lookup(each.value.create_elasticache_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 12)] : null
+  redshift_subnets    = lookup(each.value.create_redshift_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 16)] : null
+  intra_subnets       = lookup(each.value.create_intra_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 20)] : null
 
   create_database_subnet_group  = try(each.value.create_database_subnet_group, local.vpc_defaults.create_database_subnet_group, false) # Enables public access
   manage_default_network_acl    = try(each.value.manage_default_network_acl, local.vpc_defaults.manage_default_network_acl, false)
@@ -176,22 +177,6 @@ module "vpc" {
   vpc_flow_log_tags                               = try(each.value.vpc_flow_log_tags, local.vpc_defaults.vpc_flow_log_tags, {})
 
   customer_gateways = try(each.value.customer_gateways, local.vpc_defaults.customer_gateways, {})
-
-  # customer_gateways = {
-  #   IP1 = {
-  #     bgp_asn     = 65112
-  #     ip_address  = "1.2.3.4"
-  #     device_name = "some_name"
-  #   },
-  #   IP2 = {
-  #     bgp_asn    = 65112
-  #     ip_address = "5.6.7.8"
-  #   }
-  #   IP3 = {
-  #     bgp_asn_extended = 2147483648
-  #     ip_address       = "5.6.7.8"
-  #   }
-  # }
 
   enable_vpn_gateway = try(each.value.enable_vpn_gateway, local.vpc_defaults.enable_vpn_gateway, false)
   vpn_gateway_id     = try(each.value.vpn_gateway_id, local.vpc_defaults.vpn_gateway_id, null)

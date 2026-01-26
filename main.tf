@@ -3,7 +3,9 @@
 locals {
   defaults = lookup(local.infra_configs, "defaults", {})
 
-  tags = {
+  tags = merge({
     TFParentModule = "iter_terraform"
-  }
+    },
+    var.tags
+  )
 }
