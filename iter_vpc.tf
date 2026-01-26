@@ -48,7 +48,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "6.6.0"
 
-  for_each = lookup(local.vpc_config)
+  for_each = local.vpc_config
 
   region = try(each.value.region, null
   )
@@ -59,11 +59,11 @@ module "vpc" {
   azs = slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3))
 
   private_subnets     = [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k)]
-  public_subnets      = lookup(each.value.create_public_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 4)] : null
-  database_subnets    = lookup(each.value.create_database_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 8)] : null
-  elasticache_subnets = lookup(each.value.create_elasticache_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 12)] : null
-  redshift_subnets    = lookup(each.value.create_redshift_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 16)] : null
-  intra_subnets       = lookup(each.value.create_intra_subnets, false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 20)] : null
+  public_subnets      = lookup(each.value, "create_public_subnets", false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 4)] : null
+  database_subnets    = lookup(each.value, "create_database_subnets", false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 8)] : null
+  elasticache_subnets = lookup(each.value, "create_elasticache_subnets", false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 12)] : null
+  redshift_subnets    = lookup(each.value, "create_redshift_subnets", false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 16)] : null
+  intra_subnets       = lookup(each.value, "create_intra_subnets", false) ? [for k, v in slice(local.azs, 0, try(each.value.az_count, local.vpc_defaults["az_count"], 3)) : cidrsubnet(local.vpc_cidrs[each.key], 8, k + 20)] : null
 
   create_database_subnet_group  = try(each.value.create_database_subnet_group, local.vpc_defaults.create_database_subnet_group, false) # Enables public access
   manage_default_network_acl    = try(each.value.manage_default_network_acl, local.vpc_defaults.manage_default_network_acl, false)
@@ -398,7 +398,7 @@ resource "aws_security_group" "rds" {
     if can(v.vpc_endpoints)
   }
 
-  name_prefix = "${local.name}-rds-${each.key}-"
+  name_prefix = "${each.key}-rds-"
   description = "Allow PostgreSQL inbound traffic"
   vpc_id      = module.vpc[each.key].vpc_id
 

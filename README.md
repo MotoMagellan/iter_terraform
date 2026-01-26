@@ -65,6 +65,9 @@ vpc:
   create_intra_subnets: false
   private_subnet_suffix: "pvt"
   public_subnet_suffix: "pub"
+  vpc_endpoints:
+    endpoint_services:
+      ecr_dkr: {}
 ```
 
 Example Configuration
@@ -80,14 +83,14 @@ vpcs:
     vpc_endpoints:
       endpoint_services:
         s3: {}
-        ecr: {}
+        ecr_dkr: {}
   "devops":
     az_count: 2
     vpc_cidr_offset: 1 # creates a VPC with a CIDR of "10.1.0.0/8"
     create_public_subnets: false
     create_database_subnets: true
     create_intra_subnets: true
-ecr:
+ecr_dkr:
   repositories:
     serviceA: {}
     serviceB: {}
