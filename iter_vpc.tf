@@ -50,8 +50,7 @@ module "vpc" {
 
   for_each = local.vpc_config
 
-  region = try(each.value.region, null
-  )
+  region = try(each.value.region, null)
 
   name = try(each.value.name, each.key)
   cidr = local.vpc_cidrs[each.key]

@@ -90,22 +90,60 @@ vpcs:
     create_public_subnets: false
     create_database_subnets: true
     create_intra_subnets: true
-ecr_dkr:
-  repositories:
-    serviceA: {}
-    serviceB: {}
-services:
-  serviceA:
-    functions:
-      <omitted>
-    secrets:
-      <omitted>
-    buckets:
-      bucket-a1:
-        <omitted>
-    dynamo_tables:
-      table_1:
-        <omitted>
+```
+
+### S3 Configs
+
+S3 buckets are defined individually with a map that contains the key and
+values for all of the configuration required for each bucket. The S3
+module will also check for values under the s3_defaults key, and use
+those values when a key is not specified in the config for a particular
+bucket.
+
+#### S3 Functional Documentation
+
+This module utilizes the standard AWS S3 Terraform module hosted at the
+[Terraform Registry](https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws).
+
+#### S3 Configuration Example
+
+Configuration Defaults
+
+```yaml
+---
+s3:
+  force_destroy: false
+  block_public_acls: true
+  block_public_policy: true
+  ignore_public_acls: true
+  restrict_public_buckets: true
+  control_object_ownership: true
+  object_ownership: "BucketOwnerEnforced"
+```
+
+Example Configuration
+
+```yaml
+---
+s3:
+  buckets:
+    "data-lake":
+      bucket: "my-org-data-lake"
+      force_destroy: true
+      versioning:
+        enabled: true
+      server_side_encryption_configuration:
+        rule:
+          apply_server_side_encryption_by_default:
+            sse_algorithm: "AES256"
+    "logs":
+      bucket_prefix: "my-org-logs-"
+      attach_lb_log_delivery_policy: true
+      lifecycle_rule:
+        - id: "log-expiration"
+          enabled: true
+          expiration:
+            days: 90
 ```
 
 <!-- BEGIN_TF_DOCS -->
