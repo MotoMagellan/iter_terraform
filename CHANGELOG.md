@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **AWS Secrets Manager Support**: Added comprehensive secrets management through new `iter_secrets.tf` module
+  - Configuration-driven secret creation using `terraform-aws-modules/secrets-manager/aws` module (v2.x)
+  - Support for 20+ Secrets Manager configuration parameters including:
+    - Basic secret configuration (name, description, region)
+    - Encryption with AWS KMS keys
+    - Secret value management (string, binary, write-only ephemeral)
+    - Ephemeral random password generation
+    - Secret replication across regions
+    - Resource policy attachment via `secret_resource_policy` configuration key
+    - Automatic rotation with Lambda function integration
+    - Configurable recovery window (0 for immediate deletion, 7-30 days)
+    - Version staging and secret versioning
+  - Configuration structure follows established pattern:
+    ```yaml
+    secrets:
+      secrets:
+        secret-name:
+          description: "My secret"
+          secret_string: "value"
+          kms_key_id: "arn:aws:kms:..."
+          secret_resource_policy:  # Optional IAM policy as map of statements
+            AllowReadAccess:
+              sid: "AllowReadAccess"
+              effect: "Allow"
+              principals:
+                - type: "AWS"
+                  identifiers: ["arn:aws:iam::123456789012:role/MyRole"]
+              actions: ["secretsmanager:GetSecretValue"]
+    ```
+  - Resource policy implementation:
+    - Uses module's built-in `policy_statements` parameter
+    - Accepts `secret_resource_policy` as map of IAM statement maps
+    - Automatically enables policy creation when `secret_resource_policy` is present
+    - No default policy - only created when explicitly configured
+  - Implemented 9 validation checks using `terraform_data` resources with lifecycle preconditions:
+    - Mutual exclusivity between `name` and `name_prefix`
+    - Single secret value type validation (only one of: secret_string, secret_binary, secret_string_wo, create_random_password)
+    - Recovery window validation (must be 0 or 7-30 days)
+    - Rotation lambda ARN requirement when rotation enabled
+    - Rotation-specific parameter validation (rotation_rules, rotate_immediately only valid when rotation enabled)
+    - Write-only secret version parameter dependencies
+    - Random password parameter dependencies
+    - Replica region validation
+  - Inherits defaults from `local.defaults.secrets` following established pattern
+  - Full integration with global tagging strategy
+  - Supports ephemeral resources for enhanced secret security (secrets not stored in state)
+
 - **S3 Bucket Support**: Added comprehensive S3 bucket management through new `iter_s3.tf` module
   - Configuration-driven S3 bucket creation using `terraform-aws-modules/s3-bucket/aws` module (v5.x)
   - Support for 40+ S3 bucket configuration parameters including:

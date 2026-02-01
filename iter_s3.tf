@@ -102,18 +102,9 @@ module "s3_bucket" {
   # Policy Configuration for Deny Incorrect KMS Key SSE
   allowed_kms_key_arn = try(each.value.allowed_kms_key_arn, local.s3_defaults.allowed_kms_key_arn, null)
 
-  # ELB/ALB Log Delivery Policy Configuration
-  elb_service_accounts     = try(each.value.elb_service_accounts, local.s3_defaults.elb_service_accounts, {})
-  lb_target_account_ids    = try(each.value.lb_target_account_ids, local.s3_defaults.lb_target_account_ids, [])
-  lb_target_prefix         = try(each.value.lb_target_prefix, local.s3_defaults.lb_target_prefix, "")
+  # Access Log Delivery Policy Configuration
   access_log_delivery_policy_source_accounts = try(each.value.access_log_delivery_policy_source_accounts, local.s3_defaults.access_log_delivery_policy_source_accounts, [])
   access_log_delivery_policy_source_buckets  = try(each.value.access_log_delivery_policy_source_buckets, local.s3_defaults.access_log_delivery_policy_source_buckets, [])
-
-  # CloudTrail Log Delivery Policy Configuration
-  cloudtrail_log_delivery_accounts = try(each.value.cloudtrail_log_delivery_accounts, local.s3_defaults.cloudtrail_log_delivery_accounts, [])
-
-  # WAF Log Delivery Policy Configuration
-  waf_log_delivery_account_ids = try(each.value.waf_log_delivery_account_ids, local.s3_defaults.waf_log_delivery_account_ids, [])
 
   # S3 Analytics Configuration
   analytics_configuration = try(each.value.analytics_configuration, local.s3_defaults.analytics_configuration, [])
@@ -123,9 +114,6 @@ module "s3_bucket" {
 
   # S3 Metrics Configuration
   metric_configuration = try(each.value.metric_configuration, local.s3_defaults.metric_configuration, [])
-
-  # S3 Bucket Notifications
-  event_notification_details = try(each.value.event_notification_details, local.s3_defaults.event_notification_details, {})
 
   # Acceleration Configuration
   acceleration_status = try(each.value.acceleration_status, local.s3_defaults.acceleration_status, null)
@@ -151,10 +139,16 @@ module "s3_bucket" {
     },
     lookup(each.value, "tags", {}),
   )
+}
 
-  ################################################################################
-  # Preconditions for Mutually-Exclusive Parameters
-  ################################################################################
+################################################################################
+# Validation Resources
+################################################################################
+# Since lifecycle preconditions are not supported in module blocks, we create
+# terraform_data resources to validate configuration parameters before deployment
+
+resource "terraform_data" "s3_validation" {
+  for_each = local.s3_buckets
 
   lifecycle {
     # Ensure bucket and bucket_prefix are not both specified

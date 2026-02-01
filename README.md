@@ -169,6 +169,76 @@ s3:
             days: 90
 ```
 
+### Secrets Manager Configs
+
+Secrets Manager secrets are defined individually with a map that contains the key and values for all of the configuration required for each secret. The Secrets Manager module will also check for values under the secrets_defaults key, and use those values when a key is not specified in the config for a particular secret.
+
+#### Secrets Manager Functional Documentation
+
+This module utilizes the standard AWS Secrets Manager Terraform module hosted at the [Terraform Registry](https://registry.terraform.io/modules/terraform-aws-modules/secrets-manager/aws).
+
+#### Secrets Manager Configuration Example
+
+Configuration Defaults
+
+```yaml
+---
+secrets:
+  recovery_window_in_days: 30
+  block_public_policy: true
+  ignore_secret_changes: false
+```
+
+Example Configuration
+
+```yaml
+---
+secrets:
+  secrets:
+    "database-password":
+      description: "RDS database master password"
+      create_random_password: true
+      random_password_length: 32
+      enable_rotation: true
+      rotation_lambda_arn: "arn:aws:lambda:us-east-1:123456789012:function:SecretsManagerRotation"
+      rotation_rules:
+        automatically_after_days: 30
+      kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+
+    "api-key":
+      description: "External API authentication key"
+      secret_string: "my-secret-api-key-value"
+      secret_resource_policy:
+        AllowReadAccess:
+          sid: "AllowReadAccess"
+          effect: "Allow"
+          principals:
+            - type: "AWS"
+              identifiers: ["arn:aws:iam::123456789012:role/MyApplicationRole"]
+          actions: ["secretsmanager:GetSecretValue"]
+        DenyExternalAccess:
+          sid: "DenyExternalAccess"
+          effect: "Deny"
+          principals:
+            - type: "*"
+              identifiers: ["*"]
+          actions: ["secretsmanager:*"]
+          conditions:
+            - test: "StringNotEquals"
+              variable: "aws:PrincipalOrgID"
+              values: ["o-xxxxxxxxxx"]
+
+    "replicated-secret":
+      description: "Multi-region replicated secret"
+      secret_string: "shared-secret-value"
+      replica:
+        us-west-2:
+          region: "us-west-2"
+        eu-west-1:
+          region: "eu-west-1"
+          kms_key_id: "arn:aws:kms:eu-west-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+```
+
 <!-- BEGIN_TF_DOCS -->
 
 
@@ -192,6 +262,7 @@ s3:
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.0 |
 | <a name="provider_github"></a> [github](#provider\_github) | ~> 6.0 |
 | <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | ~> 3.0 |
+| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
 
@@ -199,6 +270,8 @@ s3:
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 5.0 |
+| <a name="module_secrets_manager"></a> [secrets\_manager](#module\_secrets\_manager) | terraform-aws-modules/secrets-manager/aws | ~> 2.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 6.6.0 |
 | <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | terraform-aws-modules/vpc/aws//modules/vpc-endpoints | 6.6.0 |
 
@@ -209,10 +282,15 @@ s3:
 | Name | Type |
 |------|------|
 | [aws_security_group.rds](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [terraform_data.s3_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.secrets_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.vpc_config_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_iam_policy_document.dynamodb_endpoint_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.generic_endpoint_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [github_repository_file.config_defaults](https://registry.terraform.io/providers/hashicorp/github/latest/docs/data-sources/repository_file) | data source |
 | [github_repository_file.github_infra_configs](https://registry.terraform.io/providers/hashicorp/github/latest/docs/data-sources/repository_file) | data source |
+| [gitlab_repository_file.config_defaults](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/repository_file) | data source |
 | [gitlab_repository_file.gitlab_infra_configs](https://registry.terraform.io/providers/gitlabhq/gitlab/latest/docs/data-sources/repository_file) | data source |
 
 ## Inputs

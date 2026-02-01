@@ -41,6 +41,39 @@ locals {
 }
 
 ################################################################################
+# Configuration Validation
+################################################################################
+
+resource "terraform_data" "vpc_config_validation" {
+  for_each = local.vpc_config
+
+  lifecycle {
+    precondition {
+      condition = !(
+        try(each.value.single_nat_gateway, local.vpc_defaults.single_nat_gateway, false) &&
+        try(each.value.one_nat_gateway_per_az, local.vpc_defaults.one_nat_gateway_per_az, false)
+      )
+      error_message = "VPC '${each.key}': Cannot set both 'single_nat_gateway' and 'one_nat_gateway_per_az' to true. These options are mutually exclusive."
+    }
+
+    precondition {
+      condition = !(
+        try(each.value.create_database_nat_gateway_route, local.vpc_defaults.create_database_nat_gateway_route, false) &&
+        try(each.value.create_database_internet_gateway_route, local.vpc_defaults.create_database_internet_gateway_route, false)
+      )
+      error_message = "VPC '${each.key}': Cannot set both 'create_database_nat_gateway_route' and 'create_database_internet_gateway_route' to true. Database subnets should route through either NAT gateway or internet gateway, not both."
+    }
+
+    precondition {
+      condition = !(
+        can(each.value.cidr) && can(each.value.vpc_cidr_offset)
+      )
+      error_message = "VPC '${each.key}': Cannot specify both 'cidr' and 'vpc_cidr_offset'. Use either an explicit CIDR or the offset calculation, not both."
+    }
+  }
+}
+
+################################################################################
 # VPC Module
 ################################################################################
 
@@ -222,7 +255,7 @@ module "vpc" {
   default_route_table_routes           = try(each.value.default_route_table_routes, local.vpc_defaults.default_route_table_routes, [])
 
   tags = merge(
-    lookup(local.vpc_defaults, "tags"),
+    lookup(local.vpc_defaults, "tags", {}),
     local.tags,
     {
       TFModule = "terraform-aws-modules/vpc/aws"

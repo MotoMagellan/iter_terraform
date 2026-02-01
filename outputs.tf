@@ -1,9 +1,37 @@
-output "id" {
-  description = "The ID of the resource"
-  value       = "" # Replace with actual resource reference
+output "infra_configs" {
+  description = "Merged infrastructure configurations from all specified repositories"
+  value       = local.infra_configs
 }
 
-output "arn" {
-  description = "The ARN of the resource"
-  value       = "" # Replace with actual resource reference
+################################################################################
+# VPC Outputs
+################################################################################
+
+output "vpcs" {
+  description = "Map of VPC resources created by the module"
+  value       = module.vpc
+}
+
+output "vpc_endpoints" {
+  description = "Map of VPC endpoint resources created by the module"
+  value       = module.vpc_endpoints
+}
+
+################################################################################
+# S3 Outputs
+################################################################################
+
+output "s3_buckets" {
+  description = "Map of S3 bucket resources created by the module"
+  value       = module.s3_bucket
+}
+
+################################################################################
+# Secrets Manager Outputs
+################################################################################
+
+output "secrets" {
+  description = "Map of Secrets Manager resources created by the module"
+  value       = module.secrets_manager
+  sensitive   = true
 }
