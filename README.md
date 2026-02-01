@@ -13,7 +13,7 @@ teams managing the product and its infrastructure.
 
 Infrastructure Management will be supported both for bare individual resources
 with no additional related resources and packaged solution sets that contain
-resources from multiple AWS services .
+resources from multiple AWS services.
 
 Packaged solutions will be offered to deploy sets of infrastructure for a
 specific purpose. These sets will be stored under the modules folder and
@@ -244,16 +244,12 @@ secrets:
 
 ## Requirements
 
-## Requirements
-
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.0 |
 | <a name="requirement_github"></a> [github](#requirement\_github) | ~> 6.0 |
 | <a name="requirement_gitlab"></a> [gitlab](#requirement\_gitlab) | ~> 3.0 |
-
-## Providers
 
 ## Providers
 
@@ -266,16 +262,12 @@ secrets:
 
 ## Modules
 
-## Modules
-
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 5.0 |
 | <a name="module_secrets_manager"></a> [secrets\_manager](#module\_secrets\_manager) | terraform-aws-modules/secrets-manager/aws | ~> 2.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 6.6.0 |
 | <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | terraform-aws-modules/vpc/aws//modules/vpc-endpoints | 6.6.0 |
-
-## Resources
 
 ## Resources
 
@@ -295,8 +287,6 @@ secrets:
 
 ## Inputs
 
-## Inputs
-
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_config_defaults"></a> [config\_defaults](#input\_config\_defaults) | Map of Git providers (github/gitlab) to their repository file configurations | <pre>map(object({<br/>    service    = string<br/>    repository = optional(string)<br/>    branch     = optional(string)<br/>    file_path  = string<br/>    project    = optional(string)<br/>    ref        = optional(string)<br/>  }))</pre> | n/a | yes |
@@ -306,13 +296,13 @@ secrets:
 
 ## Outputs
 
-## Outputs
-
 | Name | Description |
 |------|-------------|
-| <a name="output_arn"></a> [arn](#output\_arn) | The ARN of the resource |
-| <a name="output_id"></a> [id](#output\_id) | The ID of the resource |
 | <a name="output_infra_configs"></a> [infra\_configs](#output\_infra\_configs) | Merged infrastructure configurations from all specified repositories |
+| <a name="output_s3_buckets"></a> [s3\_buckets](#output\_s3\_buckets) | Map of S3 bucket resources created by the module |
+| <a name="output_secrets"></a> [secrets](#output\_secrets) | Map of Secrets Manager resources created by the module |
+| <a name="output_vpc_endpoints"></a> [vpc\_endpoints](#output\_vpc\_endpoints) | Map of VPC endpoint resources created by the module |
+| <a name="output_vpcs"></a> [vpcs](#output\_vpcs) | Map of VPC resources created by the module |
 <!-- END_TF_DOCS -->
 
 ## License

@@ -16,27 +16,15 @@ sections:
 content: |-
   {{ .Header }}
 
-  ## Requirements
-
   {{ .Requirements }}
-
-  ## Providers
 
   {{ .Providers }}
 
-  ## Modules
-
   {{ .Modules }}
-
-  ## Resources
 
   {{ .Resources }}
 
-  ## Inputs
-
   {{ .Inputs }}
-
-  ## Outputs
 
   {{ .Outputs }}
 
