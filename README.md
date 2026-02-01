@@ -3,6 +3,29 @@
 Iteratively build infrastructure to support Serverless and lightweight
 Container-based workloads
 
+## Implementation Philosophy
+
+This module is a Terraform-based implementation of GitOps for AWS cloud
+environments. With this module, teams can configure sets of cloud resources
+using configuration files that reside alongside their product code, making
+modification and troubleshooting of settings much more straightforward by the
+teams managing the product and its infrastructure.
+
+Infrastructure Management will be supported both for bare individual resources
+with no additional related resources and packaged solution sets that contain
+resources from multiple AWS services .
+
+Packaged solutions will be offered to deploy sets of infrastructure for a
+specific purpose. These sets will be stored under the modules folder and
+instantiated iteratively at the base level similarly to the individual
+resource types. Sets will include solutions such as globally-replicated
+secrets from a central region, Lambdas deployed into many regions from buckets
+that are replicated across regions, and RDS Global clusters.
+
+Solution sets will have a top-level configuration key name, and each type of
+configured solution sets will have child key-value maps for each solution set
+that is configured to be managed and deployed by iter_terraform.
+
 ## Usage
 
 ```hcl
