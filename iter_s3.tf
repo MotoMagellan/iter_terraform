@@ -14,8 +14,8 @@
 #
 
 locals {
-  s3_defaults = lookup(local.defaults, "s3", {})         # default S3 values for any bucket created
-  s3_config   = lookup(local.infra_configs, "s3", {})    # does not create buckets simply by defaults
+  s3_defaults = lookup(local.defaults, "s3", {})      # default S3 values for any bucket created
+  s3_config   = lookup(local.infra_configs, "s3", {}) # does not create buckets simply by defaults
 
   # Extract bucket configurations from s3 config
   s3_buckets = lookup(local.s3_config, "buckets", {})
@@ -125,10 +125,10 @@ module "s3_bucket" {
   expected_bucket_owner = try(each.value.expected_bucket_owner, local.s3_defaults.expected_bucket_owner, null)
 
   # Directory Bucket Configuration (S3 Express One Zone)
-  is_directory_bucket                              = try(each.value.is_directory_bucket, local.s3_defaults.is_directory_bucket, false)
-  data_redundancy                                  = try(each.value.data_redundancy, local.s3_defaults.data_redundancy, null)
-  availability_zone_id                             = try(each.value.availability_zone_id, local.s3_defaults.availability_zone_id, null)
-  metadata_inventory_table_configuration_state     = try(each.value.metadata_inventory_table_configuration_state, local.s3_defaults.metadata_inventory_table_configuration_state, null)
+  is_directory_bucket                          = try(each.value.is_directory_bucket, local.s3_defaults.is_directory_bucket, false)
+  data_redundancy                              = try(each.value.data_redundancy, local.s3_defaults.data_redundancy, null)
+  availability_zone_id                         = try(each.value.availability_zone_id, local.s3_defaults.availability_zone_id, null)
+  metadata_inventory_table_configuration_state = try(each.value.metadata_inventory_table_configuration_state, local.s3_defaults.metadata_inventory_table_configuration_state, null)
 
   # Tags
   tags = merge(

@@ -23,3 +23,23 @@ output "secrets" {
   value       = module.iter_terraform_basic.secrets
   sensitive   = true
 }
+
+output "kms_keys" {
+  description = "All KMS key resources created"
+  value       = module.iter_terraform_basic.kms_keys
+}
+
+output "kms_key_ids" {
+  description = "Map of KMS key names to their IDs"
+  value       = { for k, v in module.iter_terraform_basic.kms_keys : k => v.key_id }
+}
+
+output "dynamodb_tables" {
+  description = "All DynamoDB table resources created"
+  value       = module.iter_terraform_basic.dynamodb_tables
+}
+
+output "dynamodb_table_ids" {
+  description = "Map of DynamoDB table names to their IDs"
+  value       = { for k, v in module.iter_terraform_basic.dynamodb_tables : k => v.dynamodb_table_id }
+}

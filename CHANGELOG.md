@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **AWS KMS Key Support**: Added configuration-driven KMS key management through new `iter_kms.tf` module
+  - Key creation using `terraform-aws-modules/kms/aws` module (v4.x)
+  - Support for key configuration parameters including:
+    - Key specifications (key_usage, customer_master_key_spec, key_spec)
+    - Automatic key rotation with configurable rotation period
+    - Multi-region key support
+    - Custom key store integration (CloudHSM)
+    - Key state management (enable/disable)
+    - Bypass policy lockout safety check
+  - Configuration structure uses `kms` as the top-level key with KMS key name as sub-key:
+    ```yaml
+    kms:
+      key-name:
+        description: "My KMS key"
+        aliases: ["alias/my-key"]
+        resource_policy:
+          AllowRootAccess:
+            sid: "Enable IAM User Permissions"
+            effect: "Allow"
+            principals:
+              - type: "AWS"
+                identifiers: ["arn:aws:iam::123456789012:root"]
+            actions: ["kms:*"]
+            resources: ["*"]
+    ```
+  - Alias management:
+    - Supports multiple aliases per key via `aliases` list
+    - Computed aliases for dynamic values
+    - Optional name prefix for aliases
+  - Resource policy implementation:
+    - Uses module's `key_statements` parameter
+    - Accepts `resource_policy` as map of IAM statement maps
+    - Automatically disables default policy when custom `resource_policy` is provided
+    - Supports simplified IAM role-based access via `key_owners`, `key_administrators`, `key_users`, `key_service_users`
+    - Route53 DNSSEC policy support
+  - Grant management for fine-grained access control
+  - Implemented 8 validation checks using `terraform_data` resources with lifecycle preconditions:
+    - Deletion window validation (must be 7-30 days)
+    - Key rotation compatibility (symmetric encryption keys only)
+    - Key spec compatibility with rotation
+    - Rotation period validation (90-2560 days when specified)
+    - Rotation parameter dependencies
+    - Custom key store symmetric key requirement
+    - Multi-region and custom key store mutual exclusivity
+    - Alias type validation (must be list)
+  - Inherits defaults from `local.defaults.kms` following established pattern
+  - Full integration with global tagging strategy
+  - Updated basic and complete examples with KMS outputs
+  - Complete example includes DynamoDB-oriented KMS key configuration with `Purpose` and `RelatedResource` tags
+
 - **AWS Secrets Manager Support**: Added comprehensive secrets management through new `iter_secrets.tf` module
   - Configuration-driven secret creation using `terraform-aws-modules/secrets-manager/aws` module (v2.x)
   - Support for 20+ Secrets Manager configuration parameters including:
@@ -55,6 +105,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Inherits defaults from `local.defaults.secrets` following established pattern
   - Full integration with global tagging strategy
   - Supports ephemeral resources for enhanced secret security (secrets not stored in state)
+
+- **AWS DynamoDB Table Support**: Added configuration-driven DynamoDB table management through new `iter_dynamo.tf` module
+  - Table creation using `terraform-aws-modules/dynamodb-table/aws` module (v5.x)
+  - Configuration structure uses `dynamodb-tables` as the top-level key with table name as sub-key:
+    ```yaml
+    dynamodb-tables:
+      table-name:
+        create_table: true
+        config:
+          hash_key: "id"
+          attributes:
+            - name: "id"
+              type: "S"
+          billing_mode: "PAY_PER_REQUEST"
+          custom-key: true
+    ```
+  - First-class keys outside `config`: `name` (optional table name override), `create_table` (required)
+  - Support for 25+ DynamoDB configuration parameters under `config` including:
+    - Key schema (hash_key, range_key, attributes)
+    - Capacity configuration (billing_mode, read/write capacity)
+    - Point-in-time recovery with configurable retention period
+    - TTL configuration
+    - Global and local secondary indexes
+    - DynamoDB Streams with configurable view types
+    - Server-side encryption with AWS-managed or customer-managed KMS keys
+    - Table class selection (STANDARD, STANDARD_INFREQUENT_ACCESS)
+    - Deletion protection
+    - Autoscaling for read/write capacity and indexes
+    - On-demand and warm throughput configuration
+    - Global table replication across regions
+    - Table import from S3
+  - Custom KMS key integration via `custom-key` boolean:
+    - When `true`, automatically looks up a KMS key by matching the `purpose` tag to the table key name
+    - Automatically enables server-side encryption when `custom-key` is set
+    - Leverages global `kms_keys_by_purpose` local in `main.tf` for tag-based KMS key resolution
+    - Validates that a matching KMS key exists before deployment
+  - Resource policy support:
+    - Accepts `resource_policy` as either a JSON string or a map (automatically jsonencoded)
+    - Supports the module's `__DYNAMODB_TABLE_ARN__` placeholder for self-referencing policies
+  - CloudWatch Contributor Insights (`aws_dynamodb_contributor_insights`):
+    - Enabled per-table via `contributor_insights.enabled` in config
+    - Optional `index_name` for GSI-level insights
+  - DynamoDB Table Export to S3 (`aws_dynamodb_table_export`):
+    - Full and incremental export support
+    - Configurable S3 destination (bucket, prefix, owner)
+    - Export format selection (DYNAMODB_JSON, ION)
+    - S3 server-side encryption options (AES256, KMS)
+    - Dynamic `incremental_export_specification` block for incremental exports
+  - Implemented 13 validation checks using `terraform_data` resources with lifecycle preconditions:
+    - `create_table` must be specified
+    - `hash_key` required
+    - `attributes` required and must be a list
+    - `attributes` must include hash_key entry
+    - `attributes` must include range_key entry (when range_key specified)
+    - `billing_mode` validation (PROVISIONED or PAY_PER_REQUEST)
+    - Read/write capacity only valid with PROVISIONED billing
+    - `stream_view_type` required when streams enabled
+    - `custom-key` and explicit KMS ARN mutually exclusive
+    - `custom-key` requires matching KMS key with `purpose` tag
+    - Table export requires point-in-time recovery enabled
+    - Table export requires `s3_bucket` specified
+    - `table_class` validation (STANDARD or STANDARD_INFREQUENT_ACCESS)
+  - Inherits defaults from `local.defaults["dynamodb-tables"]` following established pattern
+  - Full integration with global tagging strategy
+  - Updated basic and complete examples with DynamoDB outputs and YAML configuration examples
+  - Added global `kms_keys_by_purpose` local to `main.tf` for cross-resource KMS key tag-based lookups
 
 - **S3 Bucket Support**: Added comprehensive S3 bucket management through new `iter_s3.tf` module
   - Configuration-driven S3 bucket creation using `terraform-aws-modules/s3-bucket/aws` module (v5.x)

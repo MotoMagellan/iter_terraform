@@ -35,3 +35,21 @@ output "secrets" {
   value       = module.secrets_manager
   sensitive   = true
 }
+
+################################################################################
+# KMS Outputs
+################################################################################
+
+output "kms_keys" {
+  description = "Map of KMS key resources created by the module"
+  value       = module.kms
+}
+
+################################################################################
+# DynamoDB Outputs
+################################################################################
+
+output "dynamodb_tables" {
+  description = "Map of DynamoDB table resources created by the module"
+  value       = module.dynamodb_table
+}

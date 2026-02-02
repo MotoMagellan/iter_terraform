@@ -1,10 +1,3 @@
-locals {
-  infra_configs = merge(concat(
-    [for ds in values(data.github_repository_file.github_infra_configs) : yamldecode(ds.content)],
-    [for ds in values(data.gitlab_repository_file.gitlab_infra_configs) : yamldecode(ds.content)]
-  )...)
-}
-
 data "github_repository_file" "github_infra_configs" {
   for_each = toset(lookup(var.config_repo_files, "github", null))
 
@@ -35,10 +28,4 @@ data "gitlab_repository_file" "config_defaults" {
   project   = each.value.repository
   ref       = try(each.value.branch, var.default_config_branch)
   file_path = each.value.file_path
-}
-
-
-output "infra_configs" {
-  description = "Merged infrastructure configurations from all specified repositories"
-  value       = local.infra_configs
 }

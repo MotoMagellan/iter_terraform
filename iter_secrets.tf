@@ -35,8 +35,8 @@
 #
 
 locals {
-  secrets_defaults = lookup(local.defaults, "secrets", {})         # default Secrets Manager values for any secret created
-  secrets_config   = lookup(local.infra_configs, "secrets", {})    # does not create secrets simply by defaults
+  secrets_defaults = lookup(local.defaults, "secrets", {})      # default Secrets Manager values for any secret created
+  secrets_config   = lookup(local.infra_configs, "secrets", {}) # does not create secrets simply by defaults
 
   # Extract secret configurations from secrets config
   secrets = lookup(local.secrets_config, "secrets", {})
@@ -66,35 +66,35 @@ module "secrets_manager" {
   recovery_window_in_days = try(each.value.recovery_window_in_days, local.secrets_defaults.recovery_window_in_days, 30)
 
   # Replication Configuration
-  replica                         = try(each.value.replica, local.secrets_defaults.replica, {})
+  replica                        = try(each.value.replica, local.secrets_defaults.replica, {})
   force_overwrite_replica_secret = try(each.value.force_overwrite_replica_secret, local.secrets_defaults.force_overwrite_replica_secret, false)
 
   # Policy Configuration
   # If secret_resource_policy is provided, use it; otherwise policy is not created
-  create_policy              = can(each.value.secret_resource_policy) ? true : false
-  block_public_policy        = try(each.value.block_public_policy, local.secrets_defaults.block_public_policy, true)
-  policy_statements          = can(each.value.secret_resource_policy) ? each.value.secret_resource_policy : {}
-  source_policy_documents    = try(each.value.source_policy_documents, local.secrets_defaults.source_policy_documents, [])
-  override_policy_documents  = try(each.value.override_policy_documents, local.secrets_defaults.override_policy_documents, [])
+  create_policy             = can(each.value.secret_resource_policy) ? true : false
+  block_public_policy       = try(each.value.block_public_policy, local.secrets_defaults.block_public_policy, true)
+  policy_statements         = can(each.value.secret_resource_policy) ? each.value.secret_resource_policy : {}
+  source_policy_documents   = try(each.value.source_policy_documents, local.secrets_defaults.source_policy_documents, [])
+  override_policy_documents = try(each.value.override_policy_documents, local.secrets_defaults.override_policy_documents, [])
 
   # Secret Value Configuration
-  ignore_secret_changes = try(each.value.ignore_secret_changes, local.secrets_defaults.ignore_secret_changes, false)
-  secret_string         = try(each.value.secret_string, local.secrets_defaults.secret_string, null)
-  secret_binary         = try(each.value.secret_binary, local.secrets_defaults.secret_binary, null)
-  secret_string_wo      = try(each.value.secret_string_wo, local.secrets_defaults.secret_string_wo, null)
+  ignore_secret_changes    = try(each.value.ignore_secret_changes, local.secrets_defaults.ignore_secret_changes, false)
+  secret_string            = try(each.value.secret_string, local.secrets_defaults.secret_string, null)
+  secret_binary            = try(each.value.secret_binary, local.secrets_defaults.secret_binary, null)
+  secret_string_wo         = try(each.value.secret_string_wo, local.secrets_defaults.secret_string_wo, null)
   secret_string_wo_version = try(each.value.secret_string_wo_version, local.secrets_defaults.secret_string_wo_version, null)
-  version_stages        = try(each.value.version_stages, local.secrets_defaults.version_stages, null)
+  version_stages           = try(each.value.version_stages, local.secrets_defaults.version_stages, null)
 
   # Random Password Generation
-  create_random_password          = try(each.value.create_random_password, local.secrets_defaults.create_random_password, false)
-  random_password_length          = try(each.value.random_password_length, local.secrets_defaults.random_password_length, 32)
+  create_random_password           = try(each.value.create_random_password, local.secrets_defaults.create_random_password, false)
+  random_password_length           = try(each.value.random_password_length, local.secrets_defaults.random_password_length, 32)
   random_password_override_special = try(each.value.random_password_override_special, local.secrets_defaults.random_password_override_special, null)
 
   # Rotation Configuration
-  enable_rotation      = try(each.value.enable_rotation, local.secrets_defaults.enable_rotation, false)
-  rotate_immediately   = try(each.value.rotate_immediately, local.secrets_defaults.rotate_immediately, null)
-  rotation_lambda_arn  = try(each.value.rotation_lambda_arn, local.secrets_defaults.rotation_lambda_arn, null)
-  rotation_rules       = try(each.value.rotation_rules, local.secrets_defaults.rotation_rules, {})
+  enable_rotation     = try(each.value.enable_rotation, local.secrets_defaults.enable_rotation, false)
+  rotate_immediately  = try(each.value.rotate_immediately, local.secrets_defaults.rotate_immediately, null)
+  rotation_lambda_arn = try(each.value.rotation_lambda_arn, local.secrets_defaults.rotation_lambda_arn, null)
+  rotation_rules      = try(each.value.rotation_rules, local.secrets_defaults.rotation_rules, {})
 
   # Tags
   tags = merge(

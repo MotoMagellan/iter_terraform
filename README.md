@@ -239,6 +239,128 @@ secrets:
           kms_key_id: "arn:aws:kms:eu-west-1:123456789012:key/12345678-1234-1234-1234-123456789012"
 ```
 
+### KMS Configs
+
+KMS keys are defined individually with a map that contains the key and values for all of the configuration required for each key. The KMS module will also check for values under the kms_defaults key, and use those values when a key is not specified in the config for a particular key.
+
+#### KMS Functional Documentation
+
+This module utilizes the standard AWS KMS Terraform module hosted at the [Terraform Registry](https://registry.terraform.io/modules/terraform-aws-modules/kms/aws).
+
+#### KMS Configuration Example
+
+Configuration Defaults
+
+```yaml
+---
+kms:
+  deletion_window_in_days: 30
+  enable_key_rotation: true
+  key_usage: "ENCRYPT_DECRYPT"
+  customer_master_key_spec: "SYMMETRIC_DEFAULT"
+```
+
+Example Configuration
+
+```yaml
+---
+kms:
+  dynamodb-encryption-key:
+    description: "KMS key for DynamoDB table encryption"
+    deletion_window_in_days: 30
+    enable_key_rotation: true
+    aliases:
+      - "alias/dynamodb-table-key"
+    resource_policy:
+      EnableRootAccess:
+        sid: "Enable IAM User Permissions"
+        effect: "Allow"
+        principals:
+          - type: "AWS"
+            identifiers: ["arn:aws:iam::123456789012:root"]
+        actions: ["kms:*"]
+        resources: ["*"]
+    tags:
+      purpose: "user-table"
+```
+
+### DynamoDB Table Configs
+
+DynamoDB tables are defined individually with a map that contains the key and values for all of the configuration required for each table. The DynamoDB module will also check for values under the dynamodb-tables defaults key, and use those values when a key is not specified in the config for a particular table.
+
+Each table entry supports a `name` key to override the table name (defaults to the map key), a `create_table` key to control whether the table is created, and a `config` sub-key containing all module parameters. The `custom-key` option under `config` enables automatic KMS key lookup by matching a KMS key's `purpose` tag to the table's key name.
+
+Additional resources can be configured per table: `contributor_insights` enables CloudWatch Contributor Insights, and `table_export` configures point-in-time export to S3.
+
+#### DynamoDB Functional Documentation
+
+This module utilizes the standard AWS DynamoDB Table Terraform module hosted at the [Terraform Registry](https://registry.terraform.io/modules/terraform-aws-modules/dynamodb-table/aws).
+
+#### DynamoDB Configuration Example
+
+Configuration Defaults
+
+```yaml
+---
+dynamodb-tables:
+  billing_mode: "PAY_PER_REQUEST"
+  point_in_time_recovery_enabled: false
+  ttl_enabled: false
+  server_side_encryption_enabled: false
+  stream_enabled: false
+  autoscaling_enabled: false
+```
+
+Example Configuration
+
+```yaml
+---
+dynamodb-tables:
+  "user-table":
+    create_table: true
+    config:
+      hash_key: "user_id"
+      range_key: "sort_key"
+      attributes:
+        - name: "user_id"
+          type: "S"
+        - name: "sort_key"
+          type: "S"
+      billing_mode: "PAY_PER_REQUEST"
+      point_in_time_recovery_enabled: true
+      ttl_enabled: true
+      ttl_attribute_name: "expires_at"
+      custom-key: true
+      contributor_insights:
+        enabled: true
+      table_export:
+        s3_bucket: "my-org-dynamodb-exports"
+        s3_prefix: "user-table/"
+        export_format: "DYNAMODB_JSON"
+
+  "audit-log":
+    name: "production-audit-log"
+    create_table: true
+    config:
+      hash_key: "event_id"
+      range_key: "timestamp"
+      attributes:
+        - name: "event_id"
+          type: "S"
+        - name: "timestamp"
+          type: "N"
+      billing_mode: "PROVISIONED"
+      read_capacity: 10
+      write_capacity: 5
+      autoscaling_enabled: true
+      autoscaling_read:
+        max_capacity: 100
+      autoscaling_write:
+        max_capacity: 50
+      deletion_protection_enabled: true
+      server_side_encryption_enabled: true
+```
+
 <!-- BEGIN_TF_DOCS -->
 
 
@@ -255,15 +377,17 @@ secrets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.0 |
-| <a name="provider_github"></a> [github](#provider\_github) | ~> 6.0 |
-| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | ~> 3.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.30.0 |
+| <a name="provider_github"></a> [github](#provider\_github) | 6.10.2 |
+| <a name="provider_gitlab"></a> [gitlab](#provider\_gitlab) | 3.20.0 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_dynamodb_table"></a> [dynamodb\_table](#module\_dynamodb\_table) | terraform-aws-modules/dynamodb-table/aws | ~> 5.0 |
+| <a name="module_kms"></a> [kms](#module\_kms) | terraform-aws-modules/kms/aws | ~> 4.0 |
 | <a name="module_s3_bucket"></a> [s3\_bucket](#module\_s3\_bucket) | terraform-aws-modules/s3-bucket/aws | ~> 5.0 |
 | <a name="module_secrets_manager"></a> [secrets\_manager](#module\_secrets\_manager) | terraform-aws-modules/secrets-manager/aws | ~> 2.0 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | terraform-aws-modules/vpc/aws | 6.6.0 |
@@ -273,7 +397,11 @@ secrets:
 
 | Name | Type |
 |------|------|
+| [aws_dynamodb_contributor_insights.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_contributor_insights) | resource |
+| [aws_dynamodb_table_export.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_export) | resource |
 | [aws_security_group.rds](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [terraform_data.dynamodb_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.kms_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.s3_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.secrets_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.vpc_config_validation](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
@@ -298,7 +426,9 @@ secrets:
 
 | Name | Description |
 |------|-------------|
+| <a name="output_dynamodb_tables"></a> [dynamodb\_tables](#output\_dynamodb\_tables) | Map of DynamoDB table resources created by the module |
 | <a name="output_infra_configs"></a> [infra\_configs](#output\_infra\_configs) | Merged infrastructure configurations from all specified repositories |
+| <a name="output_kms_keys"></a> [kms\_keys](#output\_kms\_keys) | Map of KMS key resources created by the module |
 | <a name="output_s3_buckets"></a> [s3\_buckets](#output\_s3\_buckets) | Map of S3 bucket resources created by the module |
 | <a name="output_secrets"></a> [secrets](#output\_secrets) | Map of Secrets Manager resources created by the module |
 | <a name="output_vpc_endpoints"></a> [vpc\_endpoints](#output\_vpc\_endpoints) | Map of VPC endpoint resources created by the module |
