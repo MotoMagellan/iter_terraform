@@ -123,6 +123,11 @@ module will also check for values under the s3_defaults key, and use
 those values when a key is not specified in the config for a particular
 bucket.
 
+The `custom-key` option enables automatic KMS key lookup by matching a KMS
+key's `purpose` tag to the bucket's key name. When set to `true`, the module
+automatically configures server-side encryption with `aws:kms` algorithm and
+bucket key enabled.
+
 #### S3 Functional Documentation
 
 This module utilizes the standard AWS S3 Terraform module hosted at the
@@ -153,15 +158,16 @@ s3:
     "data-lake":
       bucket: "my-org-data-lake"
       force_destroy: true
+      custom-key: true  # Looks up KMS key by 'purpose' tag matching "data-lake"
       versioning:
         enabled: true
-      server_side_encryption_configuration:
-        rule:
-          apply_server_side_encryption_by_default:
-            sse_algorithm: "AES256"
     "logs":
       bucket_prefix: "my-org-logs-"
       attach_lb_log_delivery_policy: true
+      server_side_encryption_configuration:  # Explicit encryption for externally-managed keys
+        rule:
+          apply_server_side_encryption_by_default:
+            sse_algorithm: "AES256"
       lifecycle_rule:
         - id: "log-expiration"
           enabled: true
@@ -172,6 +178,8 @@ s3:
 ### Secrets Manager Configs
 
 Secrets Manager secrets are defined individually with a map that contains the key and values for all of the configuration required for each secret. The Secrets Manager module will also check for values under the secrets_defaults key, and use those values when a key is not specified in the config for a particular secret.
+
+The `custom-key` option enables automatic KMS key lookup by matching a KMS key's `purpose` tag to the secret's key name. When set to `true`, the module automatically configures the secret's `kms_key_id` with the looked-up KMS key ARN.
 
 #### Secrets Manager Functional Documentation
 
@@ -203,11 +211,12 @@ secrets:
       rotation_lambda_arn: "arn:aws:lambda:us-east-1:123456789012:function:SecretsManagerRotation"
       rotation_rules:
         automatically_after_days: 30
-      kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+      custom-key: true  # Looks up KMS key by 'purpose' tag matching "database-password"
 
     "api-key":
       description: "External API authentication key"
       secret_string: "my-secret-api-key-value"
+      kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"  # Explicit ARN for externally-managed keys
       secret_resource_policy:
         AllowReadAccess:
           sid: "AllowReadAccess"

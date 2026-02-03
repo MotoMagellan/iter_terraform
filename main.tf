@@ -15,7 +15,7 @@ locals {
   )
 
   # Map of KMS key 'purpose' tag values to key ARNs for tag-based lookups
-  # Used by resources (e.g., DynamoDB) that reference KMS keys via the custom-key pattern
+  # Used by resources (e.g., DynamoDB, S3, Secrets Manager) that reference KMS keys via the custom-key pattern
   kms_keys_by_purpose = {
     for k, v in local.kms_keys :
     try(lookup(lookup(v, "tags", {}), "purpose", null), lookup(lookup(v, "tags", {}), "Purpose", null)) => module.kms[k].key_arn

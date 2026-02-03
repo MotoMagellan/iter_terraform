@@ -9,7 +9,8 @@
 #         name: "my-secret-name"  # Optional - defaults to key name
 #         description: "My secret description"
 #         secret_string: "my-secret-value"
-#         kms_key_id: "arn:aws:kms:..."
+#         custom-key: true  # Optional - triggers KMS key lookup by 'purpose' tag matching secret key name
+#         kms_key_id: "arn:aws:kms:..."  # Alternative to custom-key for explicit KMS key ARN
 #         enable_rotation: true
 #         rotation_lambda_arn: "arn:aws:lambda:..."
 #         secret_resource_policy:  # Optional - map of IAM policy statements
@@ -60,7 +61,14 @@ module "secrets_manager" {
   region      = try(each.value.region, local.secrets_defaults.region, null)
 
   # Encryption Configuration
-  kms_key_id = try(each.value.kms_key_id, local.secrets_defaults.kms_key_id, null)
+  # When custom-key is true, automatically look up KMS key by 'purpose' tag
+  kms_key_id = try(each.value["custom-key"], false) ? lookup(
+    local.kms_keys_by_purpose, each.key, null
+    ) : try(
+    each.value.kms_key_id,
+    local.secrets_defaults.kms_key_id,
+    null
+  )
 
   # Deletion Configuration
   recovery_window_in_days = try(each.value.recovery_window_in_days, local.secrets_defaults.recovery_window_in_days, 30)
@@ -202,6 +210,24 @@ resource "terraform_data" "secrets_validation" {
         can(v.region)
       ])
       error_message = "Each replica configuration for secret '${each.key}' must specify a 'region'."
+    }
+
+    # Ensure custom-key and explicit kms_key_id are not both specified
+    precondition {
+      condition = !(
+        try(each.value["custom-key"], false) &&
+        can(each.value.kms_key_id)
+      )
+      error_message = "Cannot specify both 'custom-key' and 'kms_key_id' for secret '${each.key}'. Use 'custom-key: true' for tag-based KMS lookup or provide an explicit KMS key ID, not both."
+    }
+
+    # Ensure custom-key has a matching KMS key with the correct purpose tag
+    precondition {
+      condition = !(
+        try(each.value["custom-key"], false) &&
+        !contains(keys(local.kms_keys_by_purpose), each.key)
+      )
+      error_message = "Secret '${each.key}' has 'custom-key' set to true but no KMS key with a 'purpose' tag matching '${each.key}' was found. Ensure a KMS key is defined with tags: { purpose: \"${each.key}\" }."
     }
   }
 }

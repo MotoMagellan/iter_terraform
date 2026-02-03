@@ -128,6 +128,23 @@ s3:
         Replication: "enabled"
 ```
 
+### S3 bucket with custom KMS key via tag-based lookup
+
+```yaml
+s3:
+  buckets:
+    sensitive-data:
+      bucket: "my-org-sensitive-data"
+      force_destroy: false
+      custom-key: true
+      versioning:
+        enabled: true
+      tags:
+        DataType: "sensitive"
+```
+
+> **Note:** When `custom-key: true` is set, a KMS key must exist with a `purpose` tag matching the bucket key name (e.g., `sensitive-data`). See the KMS examples below for how to configure a matching key. The module automatically configures SSE with `aws:kms` algorithm, bucket key enabled, and the looked-up KMS key ARN.
+
 ## Secrets Manager
 
 Top-level key: `secrets`, with a `secrets` sub-key.
@@ -201,6 +218,21 @@ secrets:
         Replicated: "true"
 ```
 
+### Secret with custom KMS key via tag-based lookup
+
+```yaml
+secrets:
+  secrets:
+    payment-credentials:
+      description: "Payment gateway credentials"
+      secret_string: "placeholder-will-be-updated-manually"
+      custom-key: true
+      tags:
+        SecretType: "payment"
+```
+
+> **Note:** When `custom-key: true` is set, a KMS key must exist with a `purpose` tag matching the secret key name (e.g., `payment-credentials`). See the KMS examples below for how to configure a matching key.
+
 ## KMS
 
 Top-level key: `kms`, with key name as sub-key.
@@ -266,9 +298,20 @@ kms:
     enable_key_rotation: true
     aliases: ["alias/s3-bucket-key"]
     tags:
-      Purpose: "encryption"
-      RelatedResource: "s3-data-bucket"
+      purpose: "sensitive-data"
+      RelatedResource: "s3-sensitive-data-bucket"
+
+  secrets-encryption-key:
+    description: "KMS key for Secrets Manager encryption"
+    deletion_window_in_days: 30
+    enable_key_rotation: true
+    aliases: ["alias/secrets-key"]
+    tags:
+      purpose: "payment-credentials"
+      RelatedResource: "secrets-manager"
 ```
+
+> **Note:** The `purpose` tag value must match the resource key name in the corresponding S3, Secrets Manager, or DynamoDB configuration. For example, a KMS key with `purpose: "sensitive-data"` will be used by an S3 bucket configured with key name `sensitive-data` and `custom-key: true`.
 
 ## DynamoDB
 

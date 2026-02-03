@@ -8,6 +8,7 @@
 #       bucket-name:
 #         bucket: "my-bucket-name"  # Optional - defaults to key name
 #         force_destroy: true
+#         custom-key: true  # Optional - triggers KMS key lookup by 'purpose' tag matching bucket key name
 #         versioning:
 #           enabled: true
 #         ... additional bucket configuration options
@@ -55,7 +56,16 @@ module "s3_bucket" {
   versioning = try(each.value.versioning, local.s3_defaults.versioning, {})
 
   # Server-side Encryption
-  server_side_encryption_configuration = try(each.value.server_side_encryption_configuration, local.s3_defaults.server_side_encryption_configuration, {})
+  # When custom-key is true, automatically configure SSE with KMS using key looked up by 'purpose' tag
+  server_side_encryption_configuration = try(each.value["custom-key"], false) ? {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        sse_algorithm     = "aws:kms"
+        kms_master_key_id = lookup(local.kms_keys_by_purpose, each.key, null)
+      }
+      bucket_key_enabled = true
+    }
+  } : try(each.value.server_side_encryption_configuration, local.s3_defaults.server_side_encryption_configuration, {})
 
   # Lifecycle Rules
   lifecycle_rule = try(each.value.lifecycle_rule, local.s3_defaults.lifecycle_rule, [])
@@ -221,6 +231,24 @@ resource "terraform_data" "s3_validation" {
         !can(each.value.allowed_kms_key_arn) && !can(local.s3_defaults.allowed_kms_key_arn)
       )
       error_message = "Must specify 'allowed_kms_key_arn' when 'attach_deny_incorrect_kms_key_sse' is true for S3 bucket '${each.key}'."
+    }
+
+    # Ensure custom-key and explicit server_side_encryption_configuration are not both specified
+    precondition {
+      condition = !(
+        try(each.value["custom-key"], false) &&
+        can(each.value.server_side_encryption_configuration)
+      )
+      error_message = "Cannot specify both 'custom-key' and 'server_side_encryption_configuration' for S3 bucket '${each.key}'. Use 'custom-key: true' for tag-based KMS lookup or provide an explicit encryption configuration, not both."
+    }
+
+    # Ensure custom-key has a matching KMS key with the correct purpose tag
+    precondition {
+      condition = !(
+        try(each.value["custom-key"], false) &&
+        !contains(keys(local.kms_keys_by_purpose), each.key)
+      )
+      error_message = "S3 bucket '${each.key}' has 'custom-key' set to true but no KMS key with a 'purpose' tag matching '${each.key}' was found. Ensure a KMS key is defined with tags: { purpose: \"${each.key}\" }."
     }
   }
 }

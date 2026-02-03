@@ -71,6 +71,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Automatic rotation with Lambda function integration
     - Configurable recovery window (0 for immediate deletion, 7-30 days)
     - Version staging and secret versioning
+  - Custom KMS key integration via `custom-key` boolean:
+    - When `true`, automatically looks up a KMS key by matching the `purpose` tag to the secret key name
+    - Automatically sets `kms_key_id` with the looked-up KMS key ARN
+    - Leverages global `kms_keys_by_purpose` local in `main.tf` for tag-based KMS key resolution
+    - Validates that a matching KMS key exists before deployment
+    - Mutually exclusive with explicit `kms_key_id` — use one or the other
+    - Explicit `kms_key_id` ARNs remain fully supported for externally-managed keys
   - Configuration structure follows established pattern:
     ```yaml
     secrets:
@@ -78,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         secret-name:
           description: "My secret"
           secret_string: "value"
-          kms_key_id: "arn:aws:kms:..."
+          custom-key: true  # automatic KMS key lookup by 'purpose' tag
           secret_resource_policy:  # Optional IAM policy as map of statements
             AllowReadAccess:
               sid: "AllowReadAccess"
@@ -93,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Accepts `secret_resource_policy` as map of IAM statement maps
     - Automatically enables policy creation when `secret_resource_policy` is present
     - No default policy - only created when explicitly configured
-  - Implemented 9 validation checks using `terraform_data` resources with lifecycle preconditions:
+  - Implemented 11 validation checks using `terraform_data` resources with lifecycle preconditions:
     - Mutual exclusivity between `name` and `name_prefix`
     - Single secret value type validation (only one of: secret_string, secret_binary, secret_string_wo, create_random_password)
     - Recovery window validation (must be 0 or 7-30 days)
@@ -102,6 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Write-only secret version parameter dependencies
     - Random password parameter dependencies
     - Replica region validation
+    - `custom-key` and explicit `kms_key_id` mutually exclusive
+    - `custom-key` requires matching KMS key with `purpose` tag
   - Inherits defaults from `local.defaults.secrets` following established pattern
   - Full integration with global tagging strategy
   - Supports ephemeral resources for enhanced secret security (secrets not stored in state)
@@ -181,19 +190,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - CORS, logging, and website configuration
     - Multiple policy attachments (ELB, CloudTrail, WAF, etc.)
     - Directory buckets (S3 Express One Zone)
+  - Custom KMS key integration via `custom-key` boolean:
+    - When `true`, automatically looks up a KMS key by matching the `purpose` tag to the bucket key name
+    - Automatically configures server-side encryption with `aws:kms` algorithm, bucket key enabled, and the looked-up KMS key ARN
+    - Leverages global `kms_keys_by_purpose` local in `main.tf` for tag-based KMS key resolution
+    - Validates that a matching KMS key exists before deployment
+    - Mutually exclusive with explicit `server_side_encryption_configuration` — use one or the other
+    - Explicit `server_side_encryption_configuration` and `kms_key_id` ARNs remain fully supported for externally-managed keys
   - Configuration structure follows established pattern:
     ```yaml
     s3:
       buckets:
         bucket-name:
+          custom-key: true  # automatic KMS key lookup by 'purpose' tag
           # bucket configuration options
     ```
-  - Implemented 8 precondition validations to prevent misconfigurations:
+  - Implemented 10 precondition validations to prevent misconfigurations:
     - Mutual exclusivity between `bucket` and `bucket_prefix`
     - Compatibility checks for ACL/grant usage with object ownership settings
     - Object lock configuration validation
     - Directory bucket parameter validation
     - KMS key requirements for encryption policies
+    - `custom-key` and explicit `server_side_encryption_configuration` mutually exclusive
+    - `custom-key` requires matching KMS key with `purpose` tag
   - Inherits defaults from `local.defaults.s3` similar to VPC defaults pattern
   - Full integration with global tagging strategy
 
