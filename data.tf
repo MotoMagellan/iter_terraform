@@ -1,5 +1,5 @@
 data "github_repository_file" "github_infra_configs" {
-  for_each = toset(lookup(var.config_repo_files, "github", null))
+  for_each = { for cfg in lookup(var.config_repo_files, "github", []) : cfg.file_path => cfg }
 
   repository = each.value.repository
   branch     = try(each.value.branch, var.default_config_branch)
@@ -7,7 +7,7 @@ data "github_repository_file" "github_infra_configs" {
 }
 
 data "gitlab_repository_file" "gitlab_infra_configs" {
-  for_each = toset(lookup(var.config_repo_files, "gitlab", null))
+  for_each = { for cfg in lookup(var.config_repo_files, "gitlab", []) : cfg.file_path => cfg }
 
   project   = each.value.project
   file_path = each.value.file_path

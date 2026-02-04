@@ -42,7 +42,24 @@ output "secrets" {
 
 output "kms_keys" {
   description = "Map of KMS key resources created by the module"
-  value       = module.kms
+  value = {
+    for k, v in module.kms : k => {
+      key_arn                      = v.key_arn
+      key_id                       = v.key_id
+      key_region                   = v.key_region
+      key_policy                   = v.key_policy
+      external_key_expiration_model = v.external_key_expiration_model
+      external_key_state           = v.external_key_state
+      external_key_usage           = v.external_key_usage
+      aliases                      = v.aliases
+    }
+  }
+}
+
+output "kms_key_grants" {
+  description = "Map of KMS key grants created by the module"
+  value       = { for k, v in module.kms : k => v.grants }
+  sensitive   = true
 }
 
 ################################################################################

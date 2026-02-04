@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Precondition Test Suite**: Added 50 Terraform native tests validating all lifecycle precondition checks across 5 resource types
+  - `tests/vpc_preconditions.tftest.hcl` — 4 tests (1 positive + 3 preconditions)
+  - `tests/kms_preconditions.tftest.hcl` — 9 tests (1 positive + 8 preconditions)
+  - `tests/s3_preconditions.tftest.hcl` — 11 tests (1 positive + 10 preconditions)
+  - `tests/secrets_preconditions.tftest.hcl` — 12 tests (1 positive + 11 preconditions)
+  - `tests/dynamo_preconditions.tftest.hcl` — 14 tests (1 positive + 13 preconditions)
+  - Tests use `mock_provider`, `override_data`, and `override_module` — no AWS credentials or API calls required
+  - Added `tests/README.md` with usage instructions
+
+### Changed
+
+- Restructured `output "kms_keys"` in `outputs.tf` to explicitly map non-sensitive fields, avoiding sensitivity propagation from the KMS module's `grants` output
+- Added new `output "kms_key_grants"` (sensitive) for consumers that need grant information
+- Fixed `data.tf` `for_each` expressions on `github_repository_file` and `gitlab_repository_file` data sources — replaced `toset()` on object lists with map comprehensions keyed by file path
+- Wrapped `s3_bucket` reference in `aws_dynamodb_table_export` with `try()` to allow the precondition to validate missing values before expression evaluation
+
 - **AWS KMS Key Support**: Added configuration-driven KMS key management through new `iter_kms.tf` module
   - Key creation using `terraform-aws-modules/kms/aws` module (v4.x)
   - Support for key configuration parameters including:

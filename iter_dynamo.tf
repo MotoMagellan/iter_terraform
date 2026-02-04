@@ -180,7 +180,7 @@ resource "aws_dynamodb_table_export" "this" {
   }
 
   table_arn         = module.dynamodb_table[each.key].dynamodb_table_arn
-  s3_bucket         = each.value.config.table_export.s3_bucket
+  s3_bucket         = try(each.value.config.table_export.s3_bucket, "")
   s3_prefix         = try(each.value.config.table_export.s3_prefix, null)
   s3_bucket_owner   = try(each.value.config.table_export.s3_bucket_owner, null)
   export_format     = try(each.value.config.table_export.export_format, "DYNAMODB_JSON")
